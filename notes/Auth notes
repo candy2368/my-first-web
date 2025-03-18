@@ -1,0 +1,59 @@
+in AuthController, we have 3 importants function:
+
+    1.Register:
+        
+        //note when you use 2 differents model you'll have to assign each manaully because the data will be overwritten.
+        //you will also need to create $user and $profile manually.
+
+    2.Login:
+         public function login(Request $request, User $user) {
+        $validate = $request->validate([
+            'email'=>'required|email',
+            'password'=>'required'
+        ]);
+
+        -compare if current email match with email from db.
+        $user = User::where('email', $validate['email'])->first();
+
+        -you check if user exists,comparing current password with the hashed password
+        which retrieve from db ($user->password).
+        if(!$user || !Hash::check($validate['password'],$user->password)) {
+            //if condition true:
+            return response()->json(
+                ["message"=> "error credential"],401
+            );
+        }
+        -create token for user:
+            php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+            import hasAPItoken in User model then add HasAPIToken in @var
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Logged in successfully',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ]);
+       
+
+    }
+    3.Logout:
+
+          if ($request->user()) {
+            // Delete current access token
+            $request->user()->currentAccessToken()->delete();
+    
+            return response()->json([
+                'message' => 'Logged out successfully.'
+            ]);
+        }
+    
+        return response()->json([
+            'message' => 'Unauthenticated.'
+        ], 401);
+
+    4.Route:
+
+        Route::post('register',[AuthController::class,'store']);
+        Route::post('login',[AuthController::class,'login']);
+        Route::middleware('auth:sanctum')->post('logout',[AuthController::class,'logout']);
